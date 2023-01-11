@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Чат на основе эхо-сервера</title>
+    <style>
+        .echo-chat {
+            width: 500px;
+            display: flex;
+            gap: 5px;
+            flex-direction: column;
+        }
+
+        .form {
+            display: grid;
+            grid-template-columns: 1fr 120px 120px;
+            grid-gap: 5px;
+
+        }
+
+        input {
+            height: 30px;
+            border: 4px solid skyblue;
+            min-width: 25px;
+        }
+
+        .btn {
+            background-color: skyblue;
+            border: none;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: none;
+            cursor: pointer;
+            font-style: normal;
+            font-size: 13px;
+            line-height: 27px;
+        }
+
+        .messages {
+            border: 4px solid skyblue;
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            min-height: 200px;
+        }
+
+        .message {
+            border: 4px solid skyblue;
+            padding: 10px;
+        }
+
+        .right-message {
+            display: flex;
+            justify-content: right;
+            padding-left: 35px;
+        }
+
+        .left-message {
+            display: flex;
+            justify-content: left;
+            padding-right: 35px;
+        }
+
+        .messages a {
+            text-decoration: none;
+            color: darkcyan;
+        }
+
+        .messages a:visited {
+            color: darkcyan;
+        }
+    </style>
+
+</head>
+<body>
+<div class="echo-chat">
+    <div class="form">
+        <input class="input">
+        <button class="btn" onclick="send()">Отправить</button>
+        <button class="btn" onclick="sendGeo()">Гео-локация</button>
+    </div>
+    <div class="messages">
+
+    </div>
+</div>
+
+<script>
+    const wsUrl = 'wss://echo-ws-service.herokuapp.com'
+
+    const output = document.querySelector('.messages')
+    const inputText = document.querySelector('.input')
+
+    websocket = new WebSocket(wsUrl);
+
+    websocket.onopen = function (evt) {
+        console.log("CONNECTED");
+    };
+    websocket.onclose = function (evt) {
+        console.log("DISCONNECTED");
+    };
+    websocket.onmessage = function (evt) {
+        console.log(evt.data)
+    }
+    websocket.onerror = function (evt) {
+        console.error(evt.data);
+    };
+
+    function send() {
+        let message = `<div class="right-message"><div class="message">${inputText.value}</div></div>`
+        output.innerHTML = output.innerHTML + message;
+
+        websocket.onmessage = function (evt) {
+            console.log(evt.data)
+            let message = `<div class="left-message"><div class="message">${evt.data}</div></div>`
+            output.innerHTML = output.innerHTML + message;
+        };
+
+        websocket.send(inputText.value);
+    }
+
+    function sendGeo() {
+        if (!navigator.geolocation) {
+            alert('Geolocation не поддерживается вашим браузером');
+        } else {
+            const success = function (position) {
+
+                const geoUrl = `https://www.openstreetmap.org/#map=18/${position.coords.latitude}/${position.coords.longitude}`;
+                const geo = `<a href="${geoUrl}">Гео-локация</a>`
+                const message = `<div class="right-message"><div class="message">${geo}</div></div>`
+                output.innerHTML = output.innerHTML + message;
+                websocket.onmessage = function (evt) {
+                    console.log(evt.data)
+                }
+                websocket.send(geo);
+
+            }
+
+            const error = function () {
+                alert('Нужно разрешить браузеру использовать вашу геолокацию')
+            }
+
+            navigator.geolocation.getCurrentPosition(success, error);
+        }
+
+    }
+</script>
+</body>
+</html>
